@@ -1,0 +1,96 @@
+// Zen Script License Template
+// Personalized per-user with SEED, SERIAL, ORDER_ID
+
+define SCRIPT_SEED = "{{SEED}}";
+define ZEN_SERIAL = "{{ZEN_SERIAL}}";
+define ORDER_ID = "{{ORDER_ID}}";
+
+bool initialized = false;
+bool authenticated = false;
+string user_key = "";
+int attempt_count = 0;
+
+int hash_string(string s) {
+    int h = 5381;
+    int i;
+    for (i = 0; i < length(s); i++) {
+        h = ((h << 5) + h) + char_at(s, i);
+        h = h & 0x7FFFFFFF;
+    }
+    return h;
+}
+
+int generate_challenge() {
+    string combined = SCRIPT_SEED + ZEN_SERIAL + ORDER_ID;
+    int raw = hash_string(combined);
+    return raw % 1000000;
+}
+
+bool validate_key(string key, int challenge) {
+    string expected_material = SCRIPT_SEED + ZEN_SERIAL + ORDER_ID + int_to_string(challenge);
+    int expected_hash = hash_string(expected_material);
+
+    int key_hash = hash_string(key);
+
+    return key_hash == expected_hash;
+}
+
+void lock_script() {
+    authenticated = false;
+    user_key = "";
+    attempt_count = 0;
+}
+
+void unlock_script() {
+    authenticated = true;
+    // ======= SCRIPT FUNCTIONALITY UNLOCKED BELOW =======
+    // Add your actual game logic here
+    // comboA();
+    // comboB();
+    // etc.
+}
+
+void main() {
+    if (!initialized) {
+        int challenge = generate_challenge();
+        printf("========================================\n");
+        printf("  LICENSE VERIFICATION REQUIRED\n");
+        printf("========================================\n");
+        printf("Challenge Code: %d\n", challenge);
+        printf("Device: %s\n", ZEN_SERIAL);
+        printf("========================================\n");
+        printf("Use !redeem in Discord to get your key\n");
+        printf("========================================\n");
+        initialized = true;
+    }
+
+    if (!authenticated) {
+        if (user_key == "") {
+            return;
+        }
+
+        int challenge = generate_challenge();
+
+        if (validate_key(user_key, challenge)) {
+            unlock_script();
+            printf("Script authenticated successfully!\n");
+        } else {
+            attempt_count++;
+            printf("Invalid key! Attempt %d/3\n", attempt_count);
+            if (attempt_count >= 3) {
+                printf("Too many failed attempts. Script disabled.\n");
+                lock_script();
+                return;
+            }
+            user_key = "";
+        }
+    }
+
+    if (authenticated) {
+        // Your script runs here
+    }
+}
+
+void set_key(string key) {
+    user_key = key;
+}
